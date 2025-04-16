@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 class Bills extends StatefulWidget {
+  // Constructor for the Bills widget
+
   const Bills({super.key});
 
   @override
@@ -8,6 +10,37 @@ class Bills extends StatefulWidget {
 }
 
 class _BillsState extends State<Bills> {
+
+  void _filterBills(String query) {
+  setState(() {
+    _filteredBills = _allBills
+        .where((bill) => bill.toLowerCase().contains(query.toLowerCase()))
+        .toList();
+  });
+}
+  // List to store all bill names
+  final List<String> _allBills = [
+    "lightbill",
+    "waterbill",
+    "internetbill",
+    "tvbill",
+    "Gas Bill",
+    "Electricity Bill",
+    "Phone Bill",
+    "Cable Bill",
+  ];
+
+  // List to store the filtered bill names based on search input
+  List<String> _filteredBills = [];
+
+  // Controller for the search bar text field
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _filteredBills = _allBills;
+  }
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
@@ -27,7 +60,12 @@ class _BillsState extends State<Bills> {
                     const SizedBox(
                       height: 10,
                     ),
-                    searchBar(),
+                    _searchBar(
+                      searchController: _searchController,
+                      filterBills: _filterBills,
+                      filteredBills: _filteredBills,
+                      allBills: _allBills,
+                    ),
                   ],
                 )))),
         floatingActionButton: floatingActionButton(context: context));
@@ -65,37 +103,57 @@ GestureDetector floatingActionButton({required BuildContext context}) {
   );
 }
 
-Container searchBar() {
-  List<String> resultList = [
-    "lightbill",
-    "waterbill",
-    "internetbill",
-    "tvbill"
-  ];
-  return Container(
-    child: Column(
-      children: [
-        SearchBar(
-          onChanged: (value) {
-            resultList =
-                resultList.where((element) => element.contains(value)).toList();
-            print(resultList);
-          },
-        ),
-        const SizedBox(
-          height: 10,
-        ),
-        SizedBox(
-          height: double.maxFinite,
-          width: double.maxFinite,
-          child: ListView.builder(
-            itemCount: resultList.length,
-            itemBuilder: ((context, index) {
-              return Text(resultList[index]);
-            }),
+// search bar for filtering bills
+Widget _searchBar({
+  required TextEditingController searchController,
+  required Function(String) filterBills,
+  required List<String> filteredBills,
+  required List<String> allBills,
+}) {
+  return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Column(
+        children: [
+          TextField(
+            controller: searchController,
+            style: TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'Search bills',
+              hintStyle: TextStyle(color: Colors.white),
+              prefixIcon: Icon(Icons.search, color: Colors.white),
+              enabledBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.white),
+                borderRadius: BorderRadius.circular(10.0),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.white),
+                borderRadius: BorderRadius.circular(10.0),
+              ),
+            ),
+            onChanged: filterBills,
           ),
-        ),
-      ],
-    ),
-  );
+          const SizedBox(
+            height: 10,
+          ),
+          //list of bills to display on the screen.
+          SizedBox(
+            height: 500,
+            width: double.maxFinite,
+            child: ListView.builder(
+              itemCount: filteredBills.length,
+              itemBuilder: (context, index) {
+                return Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text(
+                    filteredBills[index],
+                    style: TextStyle(color: Colors.white),
+                  ),
+                );
+              },
+                ),
+          ),
+        ],
+      ));
 }
+
+
