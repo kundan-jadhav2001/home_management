@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:home_management/pages/bill_list_page.dart';
 
 class Bills extends StatefulWidget {
   // Constructor for the Bills widget
@@ -142,13 +143,22 @@ Widget _searchBar({
             child: ListView.builder(
               itemCount: filteredBills.length,
               itemBuilder: (context, index) {
-                return Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Text(
-                    filteredBills[index],
-                    style: TextStyle(color: Colors.white),
+                return GestureDetector(
+                  onTap: (){
+                    Navigator.push(context, MaterialPageRoute(builder: (context)=> BillListPage()));
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: ListTile(
+                      title: Text(
+                        filteredBills[index],
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
+                    ),
                   ),
                 );
+
+
               },
                 ),
           ),

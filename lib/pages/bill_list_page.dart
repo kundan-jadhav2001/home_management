@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:home_management/models/bill.dart';
 import 'package:home_management/services/db_helper.dart';
+import 'package:home_management/pages/add_bill_page.dart';
 import 'package:intl/intl.dart';
 
 class BillListPage extends StatefulWidget {
@@ -63,6 +64,12 @@ class _BillListPageState extends State<BillListPage> {
             );
           }
         },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(context, MaterialPageRoute(builder: (context) => const AddBillPage()));
+        },
+        child: const Icon(Icons.add),
       ),
     );
   }
