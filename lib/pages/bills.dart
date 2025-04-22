@@ -21,10 +21,14 @@ class _BillsState extends State<Bills> {
 
     Future<void> _loadBillTypes() async {
     List<Bill> allBills = await DBHelper.getBills();
-    Set<String> types = {};
-    for (Bill bill in allBills) {
-      types.add(bill.type);
-    }
+        List<String> types = [];
+
+        if (allBills.isEmpty) {
+            types.add('unknown');
+        } else {
+            types = allBills.map((bill) => bill.type).toSet().toList();
+        }
+        
     setState(() {
       _billTypes = types.toList();
     });
@@ -57,7 +61,7 @@ class _BillsState extends State<Bills> {
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(
+                           MaterialPageRoute(
                               builder: (context) => BillListPage(billType: _billTypes[index]),
                             ),
                           );
