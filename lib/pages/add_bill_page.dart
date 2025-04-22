@@ -4,18 +4,35 @@ import '../services/db_helper.dart';
 import 'package:intl/intl.dart';
 
 class AddBillPage extends StatefulWidget {
-  const AddBillPage({Key? key}) : super(key: key);
+  final Bill? bill;
+  const AddBillPage({Key? key, this.bill}) : super(key: key);
 
   @override
   _AddBillPageState createState() => _AddBillPageState();
 }
 
 class _AddBillPageState extends State<AddBillPage> {
+  int _billId = 0;
+  DateTime? _dueDate;
   final _nameController = TextEditingController();
-  final _dueDateController = TextEditingController();
   final _amountController = TextEditingController();
   final _statusController = TextEditingController();
+  final _typeController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  String _selectedStatus = 'pending'; // Default value
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.bill != null) {
+      _billId = widget.bill!.id;
+      _nameController.text = widget.bill!.name;
+      _amountController.text = widget.bill!.amount.toString();
+      _typeController.text = widget.bill!.type;
+      _selectedStatus = widget.bill!.status;
+      _dueDate = widget.bill!.dueDate;
+    }
+  }
 
   @override
   void dispose() {
@@ -27,7 +44,7 @@ class _AddBillPageState extends State<AddBillPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Add Bill'),
+        title: Text(widget.bill == null ? 'Add Bill' : 'Update Bill'),
       ),
       body: Form(
         key: _formKey,
@@ -45,27 +62,43 @@ class _AddBillPageState extends State<AddBillPage> {
                   return null;
                 },
               ),
+              GestureDetector(
+                onTap: () async {
+                  FocusScope.of(context).requestFocus(FocusNode());
+                  DateTime? pickedDate = await showDatePicker(
+                    context: context,
+                    initialDate: _dueDate ?? DateTime.now(),
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime(2101),
+                  );
+                  if (pickedDate != null && pickedDate != _dueDate) {
+                    setState(() {
+                      _dueDate = pickedDate;
+                    });
+                  }
+                },
+                child: InputDecorator(
+                  decoration: const InputDecoration(labelText: 'Due Date'),
+                  child: Text(
+                    _dueDate == null ? 'Select Date' : DateFormat('yyyy-MM-dd').format(_dueDate!),
+                  ),),
+              ),
               TextFormField(
-                controller: _dueDateController,
-                decoration: const InputDecoration(labelText: 'Due Date'),
+                controller: _typeController,
+                decoration: const InputDecoration(labelText: 'Bill type'),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please enter a due date';
-                  }
-                  try {
-                    DateFormat('yyyy-MM-dd').parse(value);
-                  } catch (e) {
-                    return 'Please enter a valid date';
+                    return 'Please enter a bill type';
                   }
                   return null;
                 },
               ),
               TextFormField(
-                controller: _amountController,
-                decoration: const InputDecoration(labelText: 'Amount'),
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
+                  controller : _amountController,
+                  decoration : const InputDecoration(labelText: 'Amount'),
+                  keyboardType : TextInputType.number,
+                  validator : (value) {
+                    if (value == null || value.isEmpty) {
                     return 'Please enter an amount';
                   }
                   if (double.tryParse(value) == null) {
@@ -74,25 +107,51 @@ class _AddBillPageState extends State<AddBillPage> {
                   return null;
                 },
               ),
-              TextFormField(
-                controller: _statusController,
+              DropdownButtonFormField<String>(
+                value: _selectedStatus,
                 decoration: const InputDecoration(labelText: 'Status'),
+                items: <String>['pending', 'paid', 'canceled']
+                    .map<DropdownMenuItem<String>>((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
+                onChanged: (String? newValue) {
+                  setState(() {
+                    _selectedStatus = newValue!;
+                  });
+                },
               ),
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () async {
                   if (_formKey.currentState!.validate()) {
-                    await DBHelper.insertBill(Bill(id:0,
+                    if (widget.bill == null) {
+                      await DBHelper.insertBill(Bill(
+                          id: 0,
+                          name: _nameController.text,
+                          dueDate: _dueDate!,
+                          amount: double.parse(_amountController.text),
+                          status: _selectedStatus,
+                          type: _typeController.text));
+                      Navigator.pop(context);
+                    } else {
+                       await DBHelper.updateBill(
+                        id: widget.bill!.id,
                         name: _nameController.text,
-                        dueDate: DateTime.parse(_dueDateController.text),
+                        dueDate: _dueDate!,
                         amount: double.parse(_amountController.text),
-                        status: _statusController.text));
+                        status: _selectedStatus,
+                        type: _typeController.text,
+                      );
+                      Navigator.pop(context);
 
-
-                    Navigator.pop(context);
+                    }
+                    
                   }
                 },
-                child: const Text('Save'),
+                child: Text(widget.bill == null ? 'Save' : 'Update'),
               ),
             ],
           ),
@@ -103,8 +162,8 @@ class _AddBillPageState extends State<AddBillPage> {
 
   void _disposeControllers() {
     _nameController.dispose();
-    _dueDateController.dispose();
     _amountController.dispose();
     _statusController.dispose();
+    _typeController.dispose();
   }
 }

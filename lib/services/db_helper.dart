@@ -19,7 +19,7 @@ class DBHelper {
     await database.execute(
         "CREATE TABLE bills("
         "id INTEGER PRIMARY KEY AUTOINCREMENT, "
-        "name TEXT, dueDate TEXT, "
+        "name TEXT, dueDate TEXT, type TEXT, "
         "amount REAL, status TEXT)");
 
       await database.execute(
@@ -33,6 +33,7 @@ class DBHelper {
   static Future<int> insertBill(Bill bill) async {
     final Database db = await initializeDB();
     return await db.insert(
+
       'bills',
       bill.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
@@ -50,24 +51,49 @@ class DBHelper {
         dueDate: DateTime.parse(maps[i]['dueDate']),
         amount: maps[i]['amount'],
         status: maps[i]['status'],
+        type: maps[i]['type']
+      );
+    });
+  }
+  static Future<List<Bill>> getBillsByType(String type) async {
+    final Database db = await initializeDB();
+    final List<Map<String, dynamic>> maps = await db.query('bills', where: 'type = ?', whereArgs: [type]);
+
+    return List.generate(maps.length, (i) {
+      return Bill(
+        id: maps[i]['id'],
+        name: maps[i]['name'],
+        dueDate: DateTime.parse(maps[i]['dueDate']),
+        amount: maps[i]['amount'],
+        status: maps[i]['status'],
+        type: maps[i]['type']
       );
     });
   }
 
-  static Future<void> updateBill(Bill bill) async {
-    final db = await initializeDB();
-
-    await db.update(
-      'bills',
-      bill.toMap(),
-      where: 'id = ?',
-      whereArgs: [bill.id],
-    );
+  static Future<void> updateBill({
+  required int id,
+  required String name,
+  required DateTime dueDate,
+  required double amount,
+  required String status,
+  required String type,
+}) async {
+  final db = await initializeDB();
+  await db.update('bills', {
+    'name': name,
+    'dueDate': dueDate.toIso8601String(),
+    'amount': amount,
+    'status': status,
+    'type': type
+  }, where: 'id = ?', whereArgs: [id]);
   }
 
   static Future<void> deleteBill(int id) async {
     final db = await initializeDB();
-    await db.delete('bills', where: "id = ?", whereArgs: [id]);
+    await db.delete(
+      'bills', where: "id = ?", whereArgs: [id]
+    );
   }
 
   static Future<int> insertUser(User user) async {
