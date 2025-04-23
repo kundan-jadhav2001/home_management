@@ -178,8 +178,8 @@ class _AddBillPageState extends State<AddBillPage> {
                         dueDate: _dueDate!,
                         amount: double.parse(_amountController.text),
                         status: _selectedStatus,
-                        reminder: _selectedReminderValue,
                         type: _selectedType!,
+                        reminder: _selectedReminderValue,
                       );
                       Navigator.pop(context);
 

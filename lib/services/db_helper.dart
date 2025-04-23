@@ -94,6 +94,7 @@ class DBHelper {
   required double amount,
   required String status,
   required String type,
+  required int reminder,
 }) async {
   final db = await initializeDB();
   await db.update('bills', {
@@ -101,8 +102,8 @@ class DBHelper {
     'dueDate': dueDate.toIso8601String(),
     'amount': amount,
     'status': status,
-    'type': type,
-    'reminder' : 0,
+    'type': type,    
+    'reminder' : reminder,
   }, where: 'id = ?', whereArgs: [id]);
   }
 
