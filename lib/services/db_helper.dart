@@ -11,13 +11,20 @@ class DBHelper {
       onCreate: (database, version) async {
         await _createDb(database, version);
       },
-      version: 1,
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if(oldVersion < newVersion){
+          await _upgradeDb(db, oldVersion, newVersion);
+        }
+      },
+      version: 2,
     );
   }
 
   static Future<void> _createDb(Database database, int version) async {
     await database.execute(
         "CREATE TABLE bills("
+        "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+        "reminder INTEGER, "
         "id INTEGER PRIMARY KEY AUTOINCREMENT, "
         "name TEXT, dueDate TEXT, type TEXT, "
         "amount REAL, status TEXT)");
@@ -29,6 +36,13 @@ class DBHelper {
           "password TEXT, "
           "email TEXT)"
     );
+  }
+
+  static Future<void> _upgradeDb(Database database, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await database.execute("ALTER TABLE bills ADD COLUMN reminder INTEGER");
+    }
+
   }
   static Future<int> insertBill(Bill bill) async {
     final Database db = await initializeDB();
@@ -51,7 +65,8 @@ class DBHelper {
         dueDate: DateTime.parse(maps[i]['dueDate']),
         amount: maps[i]['amount'],
         status: maps[i]['status'],
-        type: maps[i]['type']
+        type: maps[i]['type'],
+        reminder : maps[i]['reminder']
       );
     });
   }
@@ -66,7 +81,8 @@ class DBHelper {
         dueDate: DateTime.parse(maps[i]['dueDate']),
         amount: maps[i]['amount'],
         status: maps[i]['status'],
-        type: maps[i]['type']
+        type: maps[i]['type'],
+        reminder : maps[i]['reminder']
       );
     });
   }
@@ -85,7 +101,8 @@ class DBHelper {
     'dueDate': dueDate.toIso8601String(),
     'amount': amount,
     'status': status,
-    'type': type
+    'type': type,
+    'reminder' : 0,
   }, where: 'id = ?', whereArgs: [id]);
   }
 

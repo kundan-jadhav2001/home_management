@@ -5,6 +5,7 @@ class Bill {
   double amount;
   String status;
   String type;
+  int reminder;
 
   Bill({
     required this.id,
@@ -13,6 +14,7 @@ class Bill {
     required this.amount,
     required this.type,
     required this.status,
+    required this.reminder,
   });
 
   Map<String, dynamic> toMap() {
@@ -23,6 +25,7 @@ class Bill {
       'amount': amount,
       'status': status,
       'type': type,
+      'reminder': reminder,
     };
   }
 

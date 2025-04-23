@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/bill.dart';
 import '../services/db_helper.dart';
+
 import 'package:intl/intl.dart';
 
 class AddBillPage extends StatefulWidget {
@@ -14,12 +15,16 @@ class AddBillPage extends StatefulWidget {
 class _AddBillPageState extends State<AddBillPage> {
   int _billId = 0;
   DateTime? _dueDate;
+  static const List<String> _billTypes = ['Electricity', 'Water', 'Internet', 'Rent', 'Gas', 'Phone'];
+  static const List<String> _reminderOptions = ['None', '1 day', '3 days', '7 days'];
   final _nameController = TextEditingController();
   final _amountController = TextEditingController();
   final _statusController = TextEditingController();
-  final _typeController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  String? _selectedType;
   String _selectedStatus = 'pending'; // Default value
+  String? _selectedReminder;
+  int _selectedReminderValue = 0;
 
   @override
   void initState() {
@@ -28,9 +33,15 @@ class _AddBillPageState extends State<AddBillPage> {
       _billId = widget.bill!.id;
       _nameController.text = widget.bill!.name;
       _amountController.text = widget.bill!.amount.toString();
-      _typeController.text = widget.bill!.type;
+      _selectedType = widget.bill!.type;
       _selectedStatus = widget.bill!.status;
       _dueDate = widget.bill!.dueDate;
+      _selectedReminder = _reminderOptions.firstWhere(
+        (option) => _getReminderValue(option) == widget.bill!.reminder,
+        orElse: () => 'None',
+      );
+      _selectedReminderValue = widget.bill!.reminder;
+
     }
   }
 
@@ -83,14 +94,37 @@ class _AddBillPageState extends State<AddBillPage> {
                     _dueDate == null ? 'Select Date' : DateFormat('yyyy-MM-dd').format(_dueDate!),
                   ),),
               ),
-              TextFormField(
-                controller: _typeController,
+               DropdownButtonFormField<String>(
+                value: _selectedType,
                 decoration: const InputDecoration(labelText: 'Bill type'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a bill type';
-                  }
-                  return null;
+                items: _billTypes.map<DropdownMenuItem<String>>((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
+                 onChanged: (String? newValue) {
+                  setState(() {
+                    _selectedType = newValue;
+                  });
+                },
+                validator: (value) => value == null ? 'Please select a bill type' : null,
+
+              ),
+              DropdownButtonFormField<String>(
+                value: _selectedReminder,
+                decoration: const InputDecoration(labelText: 'Reminder'),
+                items: _reminderOptions.map<DropdownMenuItem<String>>((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
+                onChanged: (String? newValue) {
+                  setState(() {
+                    _selectedReminder = newValue;
+                    _selectedReminderValue = _getReminderValue(_selectedReminder!);
+                  });
                 },
               ),
               TextFormField(
@@ -134,7 +168,8 @@ class _AddBillPageState extends State<AddBillPage> {
                           dueDate: _dueDate!,
                           amount: double.parse(_amountController.text),
                           status: _selectedStatus,
-                          type: _typeController.text));
+                          type: _selectedType!,
+                          reminder: _selectedReminderValue));
                       Navigator.pop(context);
                     } else {
                        await DBHelper.updateBill(
@@ -143,7 +178,8 @@ class _AddBillPageState extends State<AddBillPage> {
                         dueDate: _dueDate!,
                         amount: double.parse(_amountController.text),
                         status: _selectedStatus,
-                        type: _typeController.text,
+                        reminder: _selectedReminderValue,
+                        type: _selectedType!,
                       );
                       Navigator.pop(context);
 
@@ -164,6 +200,15 @@ class _AddBillPageState extends State<AddBillPage> {
     _nameController.dispose();
     _amountController.dispose();
     _statusController.dispose();
-    _typeController.dispose();
   }
+
+  int _getReminderValue(String option) {
+    switch (option) {
+      case '1 day': return 1;
+      case '3 days': return 3;
+      case '7 days': return 7;
+      default: return 0;
+    }
+  }
+
 }
