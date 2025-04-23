@@ -76,6 +76,7 @@ class _BillListPageState extends State<BillListPage> {
                               amount: bill.amount,
                               status: value == true ? 'paid' : 'pending',
                               type: bill.type,
+                              reminder: bill.reminder,
                             );
                             setState(() {
                               _bills = DBHelper.getBillsByType(widget.billType);
