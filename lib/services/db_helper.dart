@@ -23,17 +23,16 @@ class DBHelper {
   static Future<void> _createDb(Database database, int version) async {
     await database.execute(
         "CREATE TABLE bills("
-        "id INTEGER PRIMARY KEY AUTOINCREMENT, "
-        "reminder INTEGER, "
-        "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+        "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+        "reminder INTEGER,"
         "name TEXT, dueDate TEXT, type TEXT, "
         "amount REAL, status TEXT)");
 
       await database.execute(
           "CREATE TABLE users("
           "id INTEGER PRIMARY KEY AUTOINCREMENT, "
-          "username TEXT, "
-          "password TEXT, "
+          "username TEXT,"
+          "password TEXT,"
           "email TEXT)"
     );
   }
