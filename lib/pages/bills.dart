@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:home_management/pages/bill_list_page.dart';
+import 'package:home_management/pages/add_bill_page.dart';
 import '../services/db_helper.dart';
 import 'package:home_management/models/bill.dart';
 
@@ -12,24 +13,27 @@ class Bills extends StatefulWidget {
 
 class _BillsState extends State<Bills> { 
    static const List<String> _defaultBillTypes = ['Electricity', 'Water', 'Internet', 'Rent', 'Gas', 'Phone'];
-   List<String> _billTypes = [];
+   List<String> _billTypes = _defaultBillTypes;
 
   @override
   void initState() {
     super.initState();
     _loadBillTypes();
   }
+  
+  Future<List<String>> _getBillTypes() async {
+      List<Bill> allBills = await DBHelper.getBills();
+      List<String> types = [];
+      if (allBills.isEmpty) {
+          types = _defaultBillTypes;
+      } else {
+          types = allBills.map((bill) => bill.type).toSet().toList();
+      }
+      return types;
+  }
 
-    Future<void> _loadBillTypes() async {
-    List<Bill> allBills = await DBHelper.getBills();
-        List<String> types = [];
-        if (allBills.isEmpty) {
-            types = _defaultBillTypes;
-        } else {
-            types = allBills.map((bill) => bill.type).toSet().toList();
-
-        }
-        
+  Future<void> _loadBillTypes() async {
+    List<String> types = await _getBillTypes();
     setState(() {
       _billTypes = types.toList();
     });
@@ -91,7 +95,12 @@ class _BillsState extends State<Bills> {
   GestureDetector floatingActionButton({required BuildContext context}) {
   return GestureDetector(
     onTap: () {
-      Navigator.pushNamed(context, "home");
+      Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (context) =>
+                  AddBillPage(billTypes: _billTypes)));
+
     },
     child: Tooltip(
       message: "Add New Bill",

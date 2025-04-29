@@ -6,7 +6,8 @@ import 'package:intl/intl.dart';
 
 class AddBillPage extends StatefulWidget {
   final Bill? bill;
-  const AddBillPage({Key? key, this.bill}) : super(key: key);
+  final List<String> billTypes;
+  const AddBillPage({Key? key, this.bill, required this.billTypes}) : super(key: key);
 
   @override
   _AddBillPageState createState() => _AddBillPageState();
@@ -15,7 +16,6 @@ class AddBillPage extends StatefulWidget {
 class _AddBillPageState extends State<AddBillPage> {
   int _billId = 0;
   DateTime? _dueDate;
-  static const List<String> _billTypes = ['Electricity', 'Water', 'Internet', 'Rent', 'Gas', 'Phone'];
   static const List<String> _reminderOptions = ['None', '1 day', '3 days', '7 days'];
   final _nameController = TextEditingController();
   final _amountController = TextEditingController();
@@ -97,7 +97,7 @@ class _AddBillPageState extends State<AddBillPage> {
                DropdownButtonFormField<String>(
                 value: _selectedType,
                 decoration: const InputDecoration(labelText: 'Bill type'),
-                items: _billTypes.map<DropdownMenuItem<String>>((String value) {
+                items: widget.billTypes.map<DropdownMenuItem<String>>((String value) {
                   return DropdownMenuItem<String>(
                     value: value,
                     child: Text(value),
