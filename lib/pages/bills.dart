@@ -12,24 +12,16 @@ class Bills extends StatefulWidget {
 }
 
 class _BillsState extends State<Bills> { 
-   static const List<String> _defaultBillTypes = ['Electricity', 'Water', 'Internet', 'Rent', 'Gas', 'Phone'];
-   List<String> _billTypes = _defaultBillTypes;
+   List<String> _billTypes = [];
 
   @override
   void initState() {
     super.initState();
     _loadBillTypes();
   }
-  
+
   Future<List<String>> _getBillTypes() async {
-    List<Bill> allBills = await DBHelper.getBills();
-    List<String> types = [..._defaultBillTypes];
-    if (allBills.isNotEmpty) {
-      List<String> addedTypes = allBills.map((bill) => bill.type).toSet().toList();
-      types.addAll(addedTypes);
-      types = types.toSet().toList();
-    }
-    return types;
+    return await DBHelper.getBillTypes();
   }
 
   Future<void> _loadBillTypes() async {

@@ -1,0 +1,1 @@
+{ "version": "0.2.0", "configurations": [ { "name": "home_management", "request": "launch", "type": "dart", "flutterMode": "debug", "program": "lib/main.dart" } ] }

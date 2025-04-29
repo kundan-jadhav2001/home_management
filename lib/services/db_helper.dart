@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:home_management/models/bill.dart';
@@ -35,6 +36,16 @@ class DBHelper {
           "password TEXT,"
           "email TEXT)"
     );
+
+    await database.execute(
+        "CREATE TABLE bill_types("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+            "name TEXT)"
+    );
+    List<String> defaultBillTypes = ['Electricity', 'Water', 'Internet', 'Rent', 'Gas', 'Phone'];
+    for (String type in defaultBillTypes) {
+      await database.insert('bill_types', {'name': type});
+    }
   }
 
   static Future<void> _upgradeDb(Database database, int oldVersion, int newVersion) async {
@@ -43,14 +54,33 @@ class DBHelper {
     }
 
   }
+  static Future<void> insertBillType(String type) async {
+    final Database db = await initializeDB();
+    await db.insert('bill_types', {'name': type}, conflictAlgorithm: ConflictAlgorithm.ignore);
+  }
+
+  static Future<List<String>> getBillTypes() async {
+    final Database db = await initializeDB();
+    final List<Map<String, dynamic>> maps = await db.query('bill_types');
+    return List.generate(maps.length, (i) {
+      return maps[i]['name'] as String;
+    });
+  }
   static Future<int> insertBill(Bill bill) async {
     final Database db = await initializeDB();
-    return await db.insert(
+    
+    List<String> types = await getBillTypes();
+    if(!types.contains(bill.type)){
+      await insertBillType(bill.type);
+    }
 
+    final id = await db.insert(
       'bills',
       bill.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+
+    return id;
   }
 
   static Future<List<Bill>> getBills() async {
