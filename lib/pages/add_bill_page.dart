@@ -1,150 +1,156 @@
 import 'package:flutter/material.dart';
-import '../models/bill.dart';
-import '../services/db_helper.dart';
-
 import 'package:intl/intl.dart';
+import '../services/db_helper.dart';
+import 'package:home_management/models/bill.dart';
 
 class AddBillPage extends StatefulWidget {
-  final Bill? bill;
   final List<String> billTypes;
-  const AddBillPage({Key? key, this.bill, required this.billTypes}) : super(key: key);
+  final Bill? bill;
+  const AddBillPage({Key? key, required this.billTypes, this.bill})
+      : super(key: key);
 
   @override
   _AddBillPageState createState() => _AddBillPageState();
 }
 
 class _AddBillPageState extends State<AddBillPage> {
-  int _billId = 0;
-  DateTime? _dueDate;
-  static const List<String> _reminderOptions = ['None', '1 day', '3 days', '7 days'];
   final _nameController = TextEditingController();
   final _amountController = TextEditingController();
-  final _statusController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
-  String? _selectedType;
-  String _selectedStatus = 'pending'; // Default value
+  final _reminderController = TextEditingController();
+
+  DateTime _selectedDate = DateTime.now();
   String? _selectedReminder;
-  int _selectedReminderValue = 0;
+
+  final List<String> _reminderOptions = [
+    'None',
+    '1 day before',
+    '2 days before',
+    '1 week before',
+  ];
 
   @override
   void initState() {
     super.initState();
     if (widget.bill != null) {
-      _billId = widget.bill!.id;
-      _nameController.text = widget.bill!.name;
-      _amountController.text = widget.bill!.amount.toString();
-      _selectedType = widget.bill!.type;
-      _selectedStatus = widget.bill!.status;
-      _dueDate = widget.bill!.dueDate;
-      _selectedReminder = _reminderOptions.firstWhere(
-        (option) => _getReminderValue(option) == widget.bill!.reminder,
-        orElse: () => 'None',
-      );
-      _selectedReminderValue = widget.bill!.reminder;
-
+      _loadBillData();
     }
   }
 
-  @override
-  void dispose() {
-    _disposeControllers();
-    super.dispose();
+  void _loadBillData() {
+    _nameController.text = widget.bill!.name;
+    _amountController.text = widget.bill!.amount.toString();
+    _selectedDate = widget.bill!.dueDate;
+    _selectedReminder = widget.bill!.reminder;
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+    );
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+      });
+    }
+  }
+
+  Future<void> _saveBill() async {
+    if (widget.bill == null) {
+      //add new bill type
+      if (widget.billTypes.contains(_nameController.text)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('There is already a type with that name.')),
+        );
+        return;
+      } else {
+        await DBHelper.insertBillType(_nameController.text);
+      }
+
+      Navigator.pop(context);
+    } else {
+      if (_nameController.text.isEmpty || _amountController.text.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('All the fields are required')));
+        return;
+      }
+
+      if (widget.bill!.id == null) {
+        await DBHelper.insertBill(
+          name: _nameController.text,
+          dueDate: _selectedDate,
+          amount: double.parse(_amountController.text),
+          status: 'pending',
+          type: widget.bill!.type,
+          reminder: _selectedReminder,
+        );
+      } else {
+        await DBHelper.updateBill(
+          id: widget.bill!.id,
+          name: _nameController.text,
+          dueDate: _selectedDate,
+          amount: double.parse(_amountController.text),
+          status: widget.bill!.status,
+          type: widget.bill!.type,
+          reminder: _selectedReminder,
+        );
+      }
+
+      Navigator.pop(context);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.bill == null ? 'Add Bill' : 'Update Bill'),
+        title: Text(widget.bill == null ? 'Add New Bill Type' : 'Add/Edit Bill'),
       ),
-      body: Form(
-        key: _formKey,
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            if (widget.bill == null) ...[
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Name'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a name';
-                  }
-                  return null;
-                },
+                decoration: const InputDecoration(labelText: 'Bill Type Name'),
               ),
-              GestureDetector(
-                onTap: () async {
-                  FocusScope.of(context).requestFocus(FocusNode());
-                  DateTime? pickedDate = await showDatePicker(
-                    context: context,
-                    initialDate: _dueDate ?? DateTime.now(),
-                    firstDate: DateTime(2000),
-                    lastDate: DateTime(2101),
-                  );
-                  if (pickedDate != null && pickedDate != _dueDate) {
-                    setState(() {
-                      _dueDate = pickedDate;
-                    });
-                  }
-                },
-                child: InputDecorator(
-                  decoration: const InputDecoration(labelText: 'Due Date'),
-                  child: Text(
-                    _dueDate == null ? 'Select Date' : DateFormat('yyyy-MM-dd').format(_dueDate!),
-                  ),),
+            ] else ...[
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(labelText: 'Bill Name'),
               ),
-               DropdownButtonFormField<String>(
-                value: _selectedType,
-                decoration: const InputDecoration(labelText: 'Bill type'),
-                items: widget.billTypes.map<DropdownMenuItem<String>>((String value) {
+              TextFormField(
+                controller: _amountController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Amount'),
+              ),
+              const SizedBox(height: 20),
+              DropdownButtonFormField<String>(
+                value: widget.bill!.type,
+                decoration: const InputDecoration(labelText: 'Bill Type'),
+                items: widget.billTypes
+                    .map<DropdownMenuItem<String>>((String value) {
                   return DropdownMenuItem<String>(
                     value: value,
                     child: Text(value),
                   );
                 }).toList(),
-                 onChanged: (String? newValue) {
+                validator: (value) =>
+                    value == null ? 'Please select a bill type' : null,
+                onChanged: (String? newValue) {
                   setState(() {
-                    _selectedType = newValue;
+                    widget.bill!.type = newValue!;
                   });
                 },
-                validator: (value) => value == null ? 'Please select a bill type' : null,
-
               ),
               DropdownButtonFormField<String>(
                 value: _selectedReminder,
                 decoration: const InputDecoration(labelText: 'Reminder'),
-                items: _reminderOptions.map<DropdownMenuItem<String>>((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
-                onChanged: (String? newValue) {
-                  setState(() {
-                    _selectedReminder = newValue;
-                    _selectedReminderValue = _getReminderValue(_selectedReminder!);
-                  });
-                },
-              ),
-              TextFormField(
-                  controller : _amountController,
-                  decoration : const InputDecoration(labelText: 'Amount'),
-                  keyboardType : TextInputType.number,
-                  validator : (value) {
-                    if (value == null || value.isEmpty) {
-                    return 'Please enter an amount';
-                  }
-                  if (double.tryParse(value) == null) {
-                    return 'Please enter a valid number';
-                  }
-                  return null;
-                },
-              ),
-              DropdownButtonFormField<String>(
-                value: _selectedStatus,
-                decoration: const InputDecoration(labelText: 'Status'),
-                items: <String>['pending', 'paid', 'canceled']
+                items: _reminderOptions
                     .map<DropdownMenuItem<String>>((String value) {
                   return DropdownMenuItem<String>(
                     value: value,
@@ -153,62 +159,40 @@ class _AddBillPageState extends State<AddBillPage> {
                 }).toList(),
                 onChanged: (String? newValue) {
                   setState(() {
-                    _selectedStatus = newValue!;
+                    _selectedReminder = newValue;
                   });
                 },
               ),
               const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () async {
-                  if (_formKey.currentState!.validate()) {
-                    if (widget.bill == null) {
-                      await DBHelper.insertBill(Bill(
-                          id: 0,
-                          name: _nameController.text,
-                          dueDate: _dueDate!,
-                          amount: double.parse(_amountController.text),
-                          status: _selectedStatus,
-                          type: _selectedType!,
-                          reminder: _selectedReminderValue));
-                      Navigator.pop(context);
-                    } else {
-                       await DBHelper.updateBill(
-                        id: widget.bill!.id,
-                        name: _nameController.text,
-                        dueDate: _dueDate!,
-                        amount: double.parse(_amountController.text),
-                        status: _selectedStatus,
-                        type: _selectedType!,
-                        reminder: _selectedReminderValue,
-                      );
-                      Navigator.pop(context);
-
-                    }
-                    
-                  }
-                },
-                child: Text(widget.bill == null ? 'Save' : 'Update'),
+              Row(
+                children: [
+                  Text(
+                    'Due Date: ${DateFormat('yyyy-MM-dd').format(_selectedDate)}',
+                  ),
+                  const SizedBox(width: 20),
+                  ElevatedButton(
+                    onPressed: () => _selectDate(context),
+                    child: const Text('Select Date'),
+                  ),
+                ],
               ),
             ],
-          ),
+            const SizedBox(height: 40),
+            ElevatedButton(
+              onPressed: _saveBill,
+              child: const Text('Save'),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  void _disposeControllers() {
+  @override
+  void dispose() {
     _nameController.dispose();
     _amountController.dispose();
-    _statusController.dispose();
+    _reminderController.dispose();
+    super.dispose();
   }
-
-  int _getReminderValue(String option) {
-    switch (option) {
-      case '1 day': return 1;
-      case '3 days': return 3;
-      case '7 days': return 7;
-      default: return 0;
-    }
-  }
-
 }

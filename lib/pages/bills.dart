@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:home_management/pages/bill_list_page.dart';
 import 'package:home_management/pages/add_bill_page.dart';
 import '../services/db_helper.dart';
 import 'package:home_management/models/bill.dart';
+import 'package:intl/intl.dart';
+
+import 'add_bill_type.dart';
+
 
 class Bills extends StatefulWidget {
   const Bills({super.key});
@@ -11,37 +14,75 @@ class Bills extends StatefulWidget {
   State<Bills> createState() => _BillsState();
 }
 
-class _BillsState extends State<Bills> { 
-   List<String> _billTypes = [];
+class _BillsState extends State<Bills> {
+  List<Bill> _bills = [];
+  List<String> _billTypes = [];
+  String? _selectedType;
+  String? _selectedStatus;
+  DateTime? _selectedDate;
+  double? _selectedAmountMin;
+  double? _selectedAmountMax;
 
   @override
   void initState() {
     super.initState();
-    _loadBillTypes();
+    _loadData();
   }
 
-  Future<List<String>> _getBillTypes() async {
-    return await DBHelper.getBillTypes();
+  Future<void> _loadData() async {
+    await _loadBills();
+    await _loadBillTypes();
   }
 
-  Future<void> _loadBillTypes() async {
-    List<String> types = await _getBillTypes();
+  Future<List<Bill>> _getBills() async {
+    List<Bill> bills = await DBHelper.getBills();
+    return bills.where((bill) {
+       if (_selectedStatus != null && bill.status != _selectedStatus) {
+        return false;
+      }
+      if (_selectedType != null && bill.type != _selectedType) {
+        return false;
+      }
+      if (_selectedDate != null && bill.dueDate.day != _selectedDate!.day && bill.dueDate.month != _selectedDate!.month && bill.dueDate.year != _selectedDate!.year) {
+        return false;
+       }
+       if (_selectedAmountMin != null && bill.amount < _selectedAmountMin!)
+       {
+         return false;
+       }
+       if (_selectedAmountMax != null && bill.amount > _selectedAmountMax!) {
+         return false;
+       }
+
+
+      return true;
+    }).toList();
+  }
+
+  Future<void> _loadBills() async {
+    List<Bill> bills = await _getBills();
     setState(() {
-      _billTypes = types.toList();
+      _bills = bills;
     });
   }
 
-  @override
+    Future<void> _loadBillTypes() async {
+    _billTypes = await DBHelper.getBillTypes();
+  }
+
+   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
     return Scaffold(
-      backgroundColor: Colors.black,
+      appBar: AppBar(
+        title: const Text('Bills'),
+        actions: [
+          IconButton(onPressed: () => {Navigator.push(context, MaterialPageRoute(builder: (context) => AddBillTypePage()))}, icon: Icon(Icons.add_circle))
+        ],
+      ),
       body: SafeArea(
         child: Container(
           margin: const EdgeInsets.only(left: 20, right: 20),
-          decoration: const BoxDecoration(
-            color: Colors.black,
-          ),
           width: double.maxFinite,
           height: size.height,
           child: SingleChildScrollView(
@@ -49,62 +90,172 @@ class _BillsState extends State<Bills> {
               children: [
                 const SizedBox(height: 20),
                 SizedBox(
-                  height: size.height,
-                  width: double.maxFinite,
-                  child: ListView.builder(
-                    itemCount: _billTypes.length,
-                    itemBuilder: (context, index) {
-                      return GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                           MaterialPageRoute(
-                              builder: (context) => BillListPage(billType: _billTypes[index]),
-                            ),
-                          );
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      DropdownButton<String>(
+                        hint: const Text('Type'),
+                        value: _selectedType,
+                        onChanged: (String? newValue) {
+                          setState(() {
+                            _selectedType = newValue;
+                            _loadBills();
+                          });
                         },
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: ListTile(
-                            title: Text(
-                              _billTypes[index],
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                            ),
+                        items: <String>['All', ..._billTypes].map<DropdownMenuItem<String>>((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value == 'All' ? null : value,
+                            child: Text(value),
+                          );
+                        }).toList(),
+                      ),
+                      DropdownButton<String>(
+                        hint: const Text('Status'),
+                        value: _selectedStatus,
+                        onChanged: (String? newValue) {
+                          setState(() {
+                            _selectedStatus = newValue;
+                            _loadBills();
+                          });
+                        },
+                        items: <String>['All', 'pending', 'paid', 'canceled'].map<DropdownMenuItem<String>>((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value == 'All' ? null : value,
+                            child: Text(value),
+                          );
+                        }).toList(),
+                      ),
+
+                      GestureDetector(
+                        onTap: () async {
+                          FocusScope.of(context).requestFocus(FocusNode());
+                          DateTime? pickedDate = await showDatePicker(
+                            context: context,
+                            initialDate: _selectedDate ?? DateTime.now(),
+                            firstDate: DateTime(2000),
+                            lastDate: DateTime(2101),
+                          );
+                          if (pickedDate != null && pickedDate != _selectedDate) {
+                            setState(() {
+                              _selectedDate = pickedDate;
+                              _loadBills();
+                            });
+                          }
+                        },
+                        child: InputDecorator(
+                          decoration: const InputDecoration(labelText: 'Due Date'),
+                          child: Text(
+                            _selectedDate == null ? 'Select Date' : DateFormat('yyyy-MM-dd').format(_selectedDate!),
                           ),
                         ),
-                      );
-                    },
+                      ),
+                      SizedBox(
+                        width: 100,
+                        child: TextField(
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(hintText: 'Min'),
+                          onChanged: (value) {
+                            _selectedAmountMin = value.isNotEmpty ? double.parse(value) : null;
+                            _loadBills();
+                          },
+                        ),
+                      ),
+                      SizedBox(
+                        width: 100,
+                        child: TextField(
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(hintText: 'Max'),
+                          onChanged: (value) {
+                            _selectedAmountMax = value.isNotEmpty ? double.parse(value) : null;
+                            _loadBills();
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
-          ),
-        ),
-      ),
+                const SizedBox(height: 20),
+                ListView.builder(
+                    shrinkWrap: true,
+                    physics: NeverScrollableScrollPhysics(),
+                    itemCount: _bills.length,
+                    itemBuilder: (context, index) {
+                      final bill = _bills[index];
+                      return Card(
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: ListTile(
+                                title: Text(bill.name),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Status: ${bill.status}',
+                                    ),
+                                    Text(
+                                      'Due Date: ${DateFormat('dd/MM/yyyy').format(bill.dueDate)}',
+                                    ),
+                                    Text(
+                                      'Amount: \$${bill.amount.toStringAsFixed(2)}',
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            Checkbox(
+                              value: bill.status == 'paid',
+                              onChanged: (bool? value) async {
+                                await DBHelper.updateBill(
+                                  id: bill.id,
+                                  name: bill.name,
+                                  dueDate: bill.dueDate,
+                                  amount: bill.amount,
+                                  status: value == true ? 'paid' : 'pending',
+                                  type: bill.type,
+                                  reminder: bill.reminder,
+                                );
+                                _loadBills();
+                              },
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.edit),
+                              onPressed: () async {
+                                Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) => AddBillPage(
+                                            billTypes: _billTypes, bill: bill)));
+                              },
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete),
+                              onPressed: () async {
+                                await DBHelper.deleteBill(bill.id);
+                                _loadBills();
+                              },
+                            ),
+                          ],
+                          ),
+                      );
+                    }
+                  ),
+          ])))),
       floatingActionButton: floatingActionButton(context: context),
-    );
-  }
-  GestureDetector floatingActionButton({required BuildContext context}) {
-  return GestureDetector(
-    onTap: () {
-      Navigator.push(
-          context,
-          MaterialPageRoute(
-              builder: (context) =>
-                  AddBillPage(billTypes: _billTypes)));
+      );
+    }
 
-    },
-    child: Tooltip(
-      message: "Add New Bill",
-      showDuration: Duration(seconds: 3),
-      triggerMode: TooltipTriggerMode.longPress,
-      child: Container(
-        width: 50,
-        height: 50,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(40),
-        ),
+    GestureDetector floatingActionButton({required BuildContext context}) {
+      return GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AddBillPage(billTypes: _billTypes),
+            ),
+          );
+        },
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -115,8 +266,8 @@ class _BillsState extends State<Bills> {
             ),
           ],
         ),
-      ),
-    ),
-  );
-  }
+      );
+    }
+
 }
+

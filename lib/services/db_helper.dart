@@ -16,7 +16,7 @@ class DBHelper {
         if(oldVersion < newVersion){
           await _upgradeDb(db, oldVersion, newVersion);
         }
-      },
+      }, 
       version: 2,
     );
   }
@@ -24,7 +24,7 @@ class DBHelper {
   static Future<void> _createDb(Database database, int version) async {
     await database.execute(
         "CREATE TABLE bills("
-        "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+        "id INTEGER PRIMARY KEY AUTOINCREMENT, "
         "reminder INTEGER,"
         "name TEXT, dueDate TEXT, type TEXT, "
         "amount REAL, status TEXT)");
@@ -39,9 +39,9 @@ class DBHelper {
 
     await database.execute(
         "CREATE TABLE bill_types("
-            "id INTEGER PRIMARY KEY AUTOINCREMENT, "
-            "name TEXT)"
-    );
+        "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+        "name TEXT)"
+        );
     List<String> defaultBillTypes = ['Electricity', 'Water', 'Internet', 'Rent', 'Gas', 'Phone'];
     for (String type in defaultBillTypes) {
       await database.insert('bill_types', {'name': type});
@@ -50,13 +50,20 @@ class DBHelper {
 
   static Future<void> _upgradeDb(Database database, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
-      await database.execute("ALTER TABLE bills ADD COLUMN reminder INTEGER");
+      await database.execute("ALTER TABLE bills ADD COLUMN reminder TEXT");
     }
 
   }
   static Future<void> insertBillType(String type) async {
     final Database db = await initializeDB();
     await db.insert('bill_types', {'name': type}, conflictAlgorithm: ConflictAlgorithm.ignore);
+  }
+
+  static Future<void> deleteBillType(String type) async {
+    final Database db = await initializeDB();
+    await db.delete(
+      'bill_types', where: "name = ?", whereArgs: [type]
+    );
   }
 
   static Future<List<String>> getBillTypes() async {
@@ -66,21 +73,32 @@ class DBHelper {
       return maps[i]['name'] as String;
     });
   }
-  static Future<int> insertBill(Bill bill) async {
-    final Database db = await initializeDB();
-    
-    List<String> types = await getBillTypes();
-    if(!types.contains(bill.type)){
-      await insertBillType(bill.type);
-    }
-
-    final id = await db.insert(
-      'bills',
-      bill.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
-
-    return id;
+  static Future<int> insertBill({
+    required String name,
+    required DateTime dueDate,
+    required double amount,
+    required String status,
+    required String type,
+    required String? reminder,
+  }) async {
+      final Database db = await initializeDB();
+      List<String> types = await getBillTypes();
+      if(!types.contains(type)){
+        await insertBillType(type);
+      }
+      final id = await db.insert(
+        'bills',
+        {
+          'name': name,
+          'dueDate': dueDate.toIso8601String(),
+          'amount': amount,
+          'status': status,
+          'type': type,
+          'reminder': reminder,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      return id;
   }
 
   static Future<List<Bill>> getBills() async {
@@ -95,7 +113,7 @@ class DBHelper {
         amount: maps[i]['amount'],
         status: maps[i]['status'],
         type: maps[i]['type'],
-        reminder : maps[i]['reminder']
+        reminder : maps[i]['reminder'],
       );
     });
   }
@@ -111,7 +129,7 @@ class DBHelper {
         amount: maps[i]['amount'],
         status: maps[i]['status'],
         type: maps[i]['type'],
-        reminder : maps[i]['reminder']
+        reminder : maps[i]['reminder'],
       );
     });
   }
@@ -123,13 +141,13 @@ class DBHelper {
   required double amount,
   required String status,
   required String type,
-  required int reminder,
+  required String? reminder,
 }) async {
   final db = await initializeDB();
   await db.update('bills', {
     'name': name,
     'dueDate': dueDate.toIso8601String(),
-    'amount': amount,
+    'amount': amount, 
     'status': status,
     'type': type,    
     'reminder' : reminder,

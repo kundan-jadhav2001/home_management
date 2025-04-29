@@ -5,7 +5,7 @@ class Bill {
   double amount;
   String status;
   String type;
-  int reminder;
+  String? reminder;
 
   Bill({
     required this.id,

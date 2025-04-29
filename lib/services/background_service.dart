@@ -36,7 +36,7 @@ class BackgroundService {
       });
     }
 
-    Timer.periodic(const Duration(days: 1), (timer) async {
+    Timer.periodic(const Duration(seconds: 1), (timer) async {
       if (service is AndroidServiceInstance) {
         if (await service.isForegroundService()) {
           service.setForegroundNotificationInfo(
@@ -48,7 +48,15 @@ class BackgroundService {
 
       List<Bill> bills = await DBHelper.getBills();
       for (var bill in bills) {
-        DateTime reminderDate = bill.dueDate.subtract(Duration(days: bill.reminder));
+        int reminderDays = 0;
+        if(bill.reminder == "1 day before"){
+          reminderDays = 1;
+        } else if(bill.reminder == "2 days before"){
+          reminderDays = 2;
+        } else if(bill.reminder == "1 week before"){
+          reminderDays = 7;
+        }
+        DateTime reminderDate = bill.dueDate.subtract(Duration(days: reminderDays));
         DateTime now = DateTime.now();
 
         if (now.year == reminderDate.year &&
