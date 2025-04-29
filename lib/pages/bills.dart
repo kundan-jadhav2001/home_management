@@ -22,14 +22,14 @@ class _BillsState extends State<Bills> {
   }
   
   Future<List<String>> _getBillTypes() async {
-      List<Bill> allBills = await DBHelper.getBills();
-      List<String> types = [];
-      if (allBills.isEmpty) {
-          types = _defaultBillTypes;
-      } else {
-          types = allBills.map((bill) => bill.type).toSet().toList();
-      }
-      return types;
+    List<Bill> allBills = await DBHelper.getBills();
+    List<String> types = [..._defaultBillTypes];
+    if (allBills.isNotEmpty) {
+      List<String> addedTypes = allBills.map((bill) => bill.type).toSet().toList();
+      types.addAll(addedTypes);
+      types = types.toSet().toList();
+    }
+    return types;
   }
 
   Future<void> _loadBillTypes() async {
