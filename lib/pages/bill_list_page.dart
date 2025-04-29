@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:home_management/models/bill.dart';
 import 'package:home_management/services/db_helper.dart';
+import 'package:home_management/pages/bills.dart';
 import 'package:home_management/pages/add_bill_page.dart';
 import 'package:intl/intl.dart';
 
@@ -27,6 +28,13 @@ class _BillListPageState extends State<BillListPage> {
     _bills = DBHelper.getBillsByType(widget.billType);
   }
 
+    Future<List<String>> _getBillTypes() async {
+      List<Bill> allBills = await DBHelper.getBills();
+      List<String> types = [];
+      return allBills.map((bill) => bill.type).toSet().toList();
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -38,6 +46,7 @@ class _BillListPageState extends State<BillListPage> {
             return const Center(child: CircularProgressIndicator());
           } else if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
+          
           } else if (snapshot.hasData) {
             final bills = snapshot.data!;
             return ListView.builder(
@@ -86,12 +95,14 @@ class _BillListPageState extends State<BillListPage> {
                         IconButton(
                           icon: const Icon(Icons.edit),
                           onPressed: () {
-                            Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) => AddBillPage(
-                                          bill: bill,
-                                        )));
+                            _getBillTypes().then((types) =>
+                                  Navigator.push(context, MaterialPageRoute(
+                                      builder: (context) => AddBillPage(
+                                        billTypes: types,
+                                        bill: bill,
+                                      )))
+                            );
+
                           },
                         ),
                         IconButton(
@@ -138,8 +149,13 @@ class _BillListPageState extends State<BillListPage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.push(context,
-              MaterialPageRoute(builder: (context) => const AddBillPage()));
+          _getBillTypes().then((types) =>
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) =>
+                    AddBillPage(billTypes: types)))
+          );
+
         },
         child: const Icon(Icons.add),
       ),
