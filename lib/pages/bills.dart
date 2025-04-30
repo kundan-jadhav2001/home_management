@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:home_management/pages/add_bill_page.dart';
+import 'package:home_management/widgets/filter_dialog.dart';
 import '../services/db_helper.dart';
 import 'package:home_management/models/bill.dart';
 import 'package:intl/intl.dart';
@@ -14,12 +15,16 @@ class Bills extends StatefulWidget {
 }
 
 class _BillsState extends State<Bills> {
+
   List<String> _billTypes = [];
-  String? _selectedType;
-  String? _selectedStatus;
-  DateTime? _selectedDate;
-  double? _selectedAmountMin;
-  double? _selectedAmountMax;
+
+  Map<String, dynamic> _filters = {
+    'type': null,
+    'status': null,
+    'date': null,
+    'amountMin': null,
+    'amountMax': null,
+  };
 
   @override
   void initState() {
@@ -30,22 +35,23 @@ class _BillsState extends State<Bills> {
   Future<List<Bill>> _getBills() async {
     List<Bill> bills = await DBHelper.getBills();
     return bills.where((bill) {
-      if (_selectedStatus != null && bill.status != _selectedStatus) {
+      if (_filters['status'] != null && bill.status != _filters['status']) {
         return false;
       }
-      if (_selectedType != null && bill.type != _selectedType) {
+      if (_filters['type'] != null && bill.type != _filters['type']) {
         return false;
       }
-      if (_selectedDate != null &&
-          bill.dueDate.day != _selectedDate!.day &&
-          bill.dueDate.month != _selectedDate!.month &&
-          bill.dueDate.year != _selectedDate!.year) {
+      if (_filters['date'] != null &&
+          bill.dueDate.day != (_filters['date'] as DateTime).day &&
+          bill.dueDate.month != (_filters['date'] as DateTime).month &&
+          bill.dueDate.year != (_filters['date'] as DateTime).year) {
         return false;
       }
-      if (_selectedAmountMin != null && bill.amount < _selectedAmountMin!) {
+      if (_filters['amountMin'] != null &&
+          bill.amount < (_filters['amountMin'] as double)) {
         return false;
       }
-      if (_selectedAmountMax != null && bill.amount > _selectedAmountMax!) {
+      if (_filters['amountMax'] != null && bill.amount > (_filters['amountMax'] as double)) {
         return false;
       }
 
@@ -55,6 +61,50 @@ class _BillsState extends State<Bills> {
 
   Future<void> _loadBillTypes() async {
     _billTypes = await DBHelper.getBillTypes();
+  }
+
+  String _getFilterButtonText() {
+    List<String> activeFilters = [];
+
+    if (_filters['type'] != null) {
+      activeFilters.add('Type: ${_filters['type']}');
+    }
+    if (_filters['status'] != null) {
+      activeFilters.add('Status: ${_filters['status']}');
+    }
+    if (_filters['date'] != null) {
+      activeFilters.add('Date: ${DateFormat('yyyy-MM-dd').format(_filters['date'])}');
+    }
+    if (_filters['amountMin'] != null) {
+      activeFilters.add('Min: ${_filters['amountMin']}');
+    }
+    if (_filters['amountMax'] != null) {
+      activeFilters.add('Max: ${_filters['amountMax']}');
+    }
+
+    if (activeFilters.isEmpty) {
+      return 'Filter';
+    } else {
+      return activeFilters.join(', ');
+    }
+  }
+
+  void _showFilterDialog(BuildContext context) async {
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (BuildContext context) {
+        return FilterDialog(
+          billTypes: _billTypes, 
+          filters: _filters,
+          onFiltersChanged: (newFilters) => setState(() {
+             _filters = newFilters;}),
+        );
+      },
+    );
+
+    if (result != null) {
+      setState(() { _filters = result;});
+    }
   }
 
   @override
@@ -75,106 +125,19 @@ class _BillsState extends State<Bills> {
         ],
       ),
       body: SafeArea(
-          child: Container(
-              margin: const EdgeInsets.only(left: 20, right: 20),
-              width: double.maxFinite,
-              height: size.height,
-              child: SingleChildScrollView(
-                  child: Column(children: [
+        child: Container(
+          margin: const EdgeInsets.only(left: 20, right: 20),
+          width: double.maxFinite,
+          height: size.height,
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
                 const SizedBox(height: 20),
-                SizedBox(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      DropdownButton<String>(
-                        hint: const Text('Type'),
-                        value: _selectedType,
-                        onChanged: (String? newValue) {
-                          setState(() {
-                            _selectedType = newValue;
-                          });
-                        },
-                        items: <String>['All', ..._billTypes]
-                            .map<DropdownMenuItem<String>>((String value) {
-                          return DropdownMenuItem<String>(
-                            value: value == 'All' ? null : value,
-                            child: Text(value),
-                          );
-                        }).toList(),
-                      ),
-                      DropdownButton<String>(
-                        hint: const Text('Status'),
-                        value: _selectedStatus,
-                        onChanged: (String? newValue) {
-                          setState(() {
-                            _selectedStatus = newValue;
-                          });
-                        },
-                        items: <String>['All', 'pending', 'paid', 'canceled']
-                            .map<DropdownMenuItem<String>>((String value) {
-                          return DropdownMenuItem<String>(
-                            value: value == 'All' ? null : value,
-                            child: Text(value),
-                          );
-                        }).toList(),
-                      ),
-                      GestureDetector(
-                        onTap: () async {
-                          FocusScope.of(context).requestFocus(FocusNode());
-                          DateTime? pickedDate = await showDatePicker(
-                            context: context,
-                            initialDate: _selectedDate ?? DateTime.now(),
-                            firstDate: DateTime(2000),
-                            lastDate: DateTime(2101),
-                          );
-                          if (pickedDate != null &&
-                              pickedDate != _selectedDate) {
-                            setState(() {
-                              _selectedDate = pickedDate;
-                            });
-                          }
-                        },
-                        child: SizedBox(
-                          width: 100,
-                          child: InputDecorator(
-                            decoration:
-                                const InputDecoration(labelText: 'Due Date'),
-                            child: Text(
-                              _selectedDate == null
-                                  ? 'Select Date'
-                                  : DateFormat('yyyy-MM-dd')
-                                      .format(_selectedDate!),
-                            ),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: TextField(
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            hintText: 'Min',
-                          ),
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedAmountMin =
-                                  value.isNotEmpty ? double.parse(value) : null;
-                            });
-                          },
-                        ),
-                      ),
-                      Expanded(
-                        child: TextField(
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(hintText: 'Max'),
-                          onChanged: (value) {
-                            _selectedAmountMax =
-                                value.isNotEmpty ? double.parse(value) : null;
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
+                ElevatedButton(
+                  onPressed: () {
+                    _showFilterDialog(context);
+                  },
+                  child: Text(_getFilterButtonText()),
                 ),
                 const SizedBox(height: 20),
                 FutureBuilder<List<Bill>>(
@@ -228,10 +191,13 @@ class _BillsState extends State<Bills> {
                                           status: value == true
                                               ? 'paid'
                                               : 'pending',
-                                          type: bill.type,
-                                          reminder: bill.reminder,
+                                          type: bill.type, reminder: bill.reminder
                                         );
-                                        setState(() {});
+                                        setState(() {
+
+                                        });
+
+
                                       },
                                     ),
                                     IconButton(
@@ -260,6 +226,8 @@ class _BillsState extends State<Bills> {
                       }
                     }),
               ])))),
+      floatingActionButton: FloatingActionButton(onPressed: () {  Navigator.push( context, MaterialPageRoute( builder: (context) => AddBillPage(billTypes: _billTypes)),); },child: const Icon(Icons.add),),
     );
   }
 }
+
