@@ -1,3 +1,5 @@
+
+
 import 'package:flutter/material.dart';
 import 'package:home_management/pages/add_bill_page.dart';
 import '../services/db_helper.dart';
@@ -15,7 +17,6 @@ class Bills extends StatefulWidget {
 }
 
 class _BillsState extends State<Bills> {
-  List<Bill> _bills = [];
   List<String> _billTypes = [];
   String? _selectedType;
   String? _selectedStatus;
@@ -26,16 +27,9 @@ class _BillsState extends State<Bills> {
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _loadBillTypes();
   }
-
-  Future<void> _loadData() async {
-    await _loadBills();
-    await _loadBillTypes();
-  }
-
-  Future<List<Bill>> _getBills() async {
-    List<Bill> bills = await DBHelper.getBills();
+  Future<List<Bill>> _getBills() async {    List<Bill> bills = await DBHelper.getBills();
     return bills.where((bill) {
        if (_selectedStatus != null && bill.status != _selectedStatus) {
         return false;
@@ -56,14 +50,9 @@ class _BillsState extends State<Bills> {
 
 
       return true;
-    }).toList();
-  }
+    }).toList();  
 
-  Future<void> _loadBills() async {
-    List<Bill> bills = await _getBills();
-    setState(() {
-      _bills = bills;
-    });
+
   }
 
     Future<void> _loadBillTypes() async {
@@ -100,8 +89,7 @@ class _BillsState extends State<Bills> {
                         onChanged: (String? newValue) {
                           setState(() {
                             _selectedType = newValue;
-                            _loadBills();
-                          });
+                          });                   
                         },
                         items: <String>['All', ..._billTypes].map<DropdownMenuItem<String>>((String value) {
                           return DropdownMenuItem<String>(
@@ -116,7 +104,6 @@ class _BillsState extends State<Bills> {
                         onChanged: (String? newValue) {
                           setState(() {
                             _selectedStatus = newValue;
-                            _loadBills();
                           });
                         },
                         items: <String>['All', 'pending', 'paid', 'canceled'].map<DropdownMenuItem<String>>((String value) {
@@ -139,7 +126,6 @@ class _BillsState extends State<Bills> {
                           if (pickedDate != null && pickedDate != _selectedDate) {
                             setState(() {
                               _selectedDate = pickedDate;
-                              _loadBills();
                             });
                           }
                         },
@@ -157,8 +143,8 @@ class _BillsState extends State<Bills> {
                           decoration: const InputDecoration(hintText: 'Min'),
                           onChanged: (value) {
                             _selectedAmountMin = value.isNotEmpty ? double.parse(value) : null;
-                            _loadBills();
-                          },
+                          },                       
+                        
                         ),
                       ),
                       SizedBox(
@@ -168,61 +154,72 @@ class _BillsState extends State<Bills> {
                           decoration: const InputDecoration(hintText: 'Max'),
                           onChanged: (value) {
                             _selectedAmountMax = value.isNotEmpty ? double.parse(value) : null;
-                            _loadBills();
                           },
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 20),
-                ListView.builder(
-                    shrinkWrap: true,
-                    physics: NeverScrollableScrollPhysics(),
-                    itemCount: _bills.length,
-                    itemBuilder: (context, index) {
-                      final bill = _bills[index];
-                      return Card(
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: ListTile(
-                                title: Text(bill.name),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Status: ${bill.status}',
+                const SizedBox(height: 20),             
+                 FutureBuilder<List<Bill>>(
+                  future: _getBills(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    } else if (snapshot.hasError) {
+                      return Center(child: Text('Error: ${snapshot.error}'));
+                    } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return const Center(child: Text('No bills found.'));
+                    } else {
+                      List<Bill> bills = snapshot.data!;
+                      return ListView.builder(
+                          shrinkWrap: true,
+                          physics: NeverScrollableScrollPhysics(),
+                          itemCount: bills.length,
+                          itemBuilder: (context, index) {
+                            final bill = bills[index];
+                            return Card(
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: ListTile(
+                                      title: Text(bill.name),
+                                      subtitle: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Status: ${bill.status}',
+                                          ),
+                                          Text(
+                                            'Due Date: ${DateFormat('dd/MM/yyyy').format(bill.dueDate)}',
+                                          ),
+                                          Text(
+                                            'Amount: \$${bill.amount.toStringAsFixed(2)}',
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                    Text(
-                                      'Due Date: ${DateFormat('dd/MM/yyyy').format(bill.dueDate)}',
-                                    ),
-                                    Text(
-                                      'Amount: \$${bill.amount.toStringAsFixed(2)}',
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            Checkbox(
-                              value: bill.status == 'paid',
-                              onChanged: (bool? value) async {
-                                await DBHelper.updateBill(
-                                  id: bill.id,
-                                  name: bill.name,
-                                  dueDate: bill.dueDate,
-                                  amount: bill.amount,
-                                  status: value == true ? 'paid' : 'pending',
-                                  type: bill.type,
-                                  reminder: bill.reminder,
-                                );
-                                _loadBills();
-                              },
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.edit),
-                              onPressed: () async {
-                                Navigator.push(
+                                  ),
+                                  Checkbox(
+                                    value: bill.status == 'paid',
+                                    onChanged: (bool? value) async {
+                                      await DBHelper.updateBill(
+                                        id: bill.id,
+                                        name: bill.name,
+                                        dueDate: bill.dueDate,
+                                        amount: bill.amount,
+                                        status: value == true ? 'paid' : 'pending',
+                                        type: bill.type,
+                                        reminder: bill.reminder,
+                                      );
+                                      setState(() {});
+                                    },
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.edit),
+                                    onPressed: () async {
+                                      Navigator.push(
                                     context,
                                     MaterialPageRoute(
                                         builder: (context) => AddBillPage(
@@ -233,41 +230,17 @@ class _BillsState extends State<Bills> {
                               icon: const Icon(Icons.delete),
                               onPressed: () async {
                                 await DBHelper.deleteBill(bill.id);
-                                _loadBills();
+                                setState(() {});
                               },
                             ),
                           ],
                           ),
                       );
-                    }
-                  ),
+                    });
+                  }}
+                ),
           ])))),
-      floatingActionButton: floatingActionButton(context: context),
+        floatingActionButton: FloatingActionButton(onPressed: () {  Navigator.push( context, MaterialPageRoute( builder: (context) => AddBillPage(billTypes: _billTypes)),); },child: const Icon(Icons.add),),
       );
     }
-
-    GestureDetector floatingActionButton({required BuildContext context}) {
-      return GestureDetector(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => AddBillPage(billTypes: _billTypes),
-            ),
-          );
-        },
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.add,
-              size: 40,
-            ),
-          ],
-        ),
-      );
-    }
-
 }
-
