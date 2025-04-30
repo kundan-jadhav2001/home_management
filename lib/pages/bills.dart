@@ -136,19 +136,21 @@ class _BillsState extends State<Bills> {
                           ),
                         ),
                       ),
-                      SizedBox(
-                        width: 100,
+                      Expanded(
                         child: TextField(
                           keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(hintText: 'Min'),
+                          decoration: const InputDecoration(
+                            hintText: 'Min',
+                          ),
                           onChanged: (value) {
-                            _selectedAmountMin = value.isNotEmpty ? double.parse(value) : null;
-                          },                       
-                        
+                            setState(() {
+                              _selectedAmountMin =
+                                  value.isNotEmpty ? double.parse(value) : null;
+                            });
+                          },
                         ),
                       ),
-                      SizedBox(
-                        width: 100,
+                      Expanded(
                         child: TextField(
                           keyboardType: TextInputType.number,
                           decoration: const InputDecoration(hintText: 'Max'),
