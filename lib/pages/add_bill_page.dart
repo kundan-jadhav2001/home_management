@@ -4,9 +4,8 @@ import '../services/db_helper.dart';
 import 'package:home_management/models/bill.dart';
 
 class AddBillPage extends StatefulWidget {
-  final List<String> billTypes;  
+  final List<String> billTypes;
   const AddBillPage({Key? key, required this.billTypes}) : super(key: key);
-
 
   @override
   _AddBillPageState createState() => _AddBillPageState();
@@ -28,7 +27,6 @@ class _AddBillPageState extends State<AddBillPage> {
   ];
 
   @override
-
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -44,46 +42,45 @@ class _AddBillPageState extends State<AddBillPage> {
   }
 
   Future<void> _saveBill() async {
-      if (_nameController.text.isEmpty || _amountController.text.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('All the fields are required')));
-        return;
-      }
-      if (_selectedBillType == null) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Select a Bill type')));
-        return;
-      }
+    if (_nameController.text.isEmpty || _amountController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('All the fields are required')));
+      return;
+    }
+    if (_selectedBillType == null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Select a Bill type')));
+      return;
+    }
 
-      await DBHelper.insertBill(
-        name: _nameController.text,
-        dueDate: _selectedDate,
-        amount: double.parse(_amountController.text),
-        status: 'pending',
-        type: _selectedBillType!,
-        reminder: _selectedReminder,
-      );
+    await DBHelper.insertBill(
+      name: _nameController.text,
+      dueDate: _selectedDate,
+      amount: double.parse(_amountController.text),
+      status: 'pending',
+      type: _selectedBillType!,
+      reminder: _selectedReminder,
+    );
 
-      Navigator.pop(context);
-
+    Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text( 'Add New Bill'),
+        title: const Text('Add New Bill'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-          
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(labelText: 'Bill Name'),
               ),
-           const SizedBox(height: 20),
+              const SizedBox(height: 20),
               TextFormField(
                 controller: _amountController,
                 keyboardType: TextInputType.number,
@@ -137,12 +134,13 @@ class _AddBillPageState extends State<AddBillPage> {
                   ),
                 ],
               ),
-            const SizedBox(height: 40),
-            ElevatedButton(
-              onPressed: _saveBill,
-              child: const Text('Save'),
-            ),
-          ],
+              const SizedBox(height: 40),
+              ElevatedButton(
+                onPressed: _saveBill,
+                child: const Text('Save'),
+              ),
+            ],
+          ),
         ),
       ),
     );

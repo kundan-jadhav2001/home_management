@@ -58,10 +58,10 @@ class _AddBillTypePageState extends State<AddBillTypePage> {
                 onPressed: () async {
                   if (_newTypeController.text.isNotEmpty) {
                     await _deleteBillType(oldType);
-                   await DBHelper.insertBillType(_newTypeController.text);
-                   _newTypeController.clear();
-                   _loadBillTypes();
-                    
+                    await DBHelper.insertBillType(_newTypeController.text);
+                    _newTypeController.clear();
+                    _loadBillTypes();
+
                     Navigator.of(context).pop();
                   }
                 },
@@ -80,14 +80,13 @@ class _AddBillTypePageState extends State<AddBillTypePage> {
       await DBHelper.deleteBillType(type);
     } else {
       //if there are bills we should show an error
-       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-          content: Text(
-            'Cannot delete type. There are bills of that type.')),
-       );
-       return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Cannot delete type. There are bills of that type.')),
+      );
+      return;
     }
-   
+
     setState(() {
       _billTypes.remove(type);
     });
