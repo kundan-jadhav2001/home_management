@@ -226,7 +226,13 @@ class _BillsState extends State<Bills> {
                       }
                     }),
               ])))),
-      floatingActionButton: FloatingActionButton(onPressed: () {  Navigator.push( context, MaterialPageRoute( builder: (context) => AddBillPage(billTypes: _billTypes)),); },child: const Icon(Icons.add),),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(context,
+              MaterialPageRoute(builder: (context) => AddBillPage(billTypes: _billTypes)));
+        },
+        child: const Icon(Icons.add),
+      ),
     );
   }
 }
