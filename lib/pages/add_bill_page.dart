@@ -4,10 +4,9 @@ import '../services/db_helper.dart';
 import 'package:home_management/models/bill.dart';
 
 class AddBillPage extends StatefulWidget {
-  final List<String> billTypes;
-  final Bill? bill;
-  const AddBillPage({Key? key, required this.billTypes, this.bill})
-      : super(key: key);
+  final List<String> billTypes;  
+  const AddBillPage({Key? key, required this.billTypes}) : super(key: key);
+
 
   @override
   _AddBillPageState createState() => _AddBillPageState();
@@ -16,7 +15,7 @@ class AddBillPage extends StatefulWidget {
 class _AddBillPageState extends State<AddBillPage> {
   final _nameController = TextEditingController();
   final _amountController = TextEditingController();
-  final _reminderController = TextEditingController();
+  String? _selectedBillType;
 
   DateTime _selectedDate = DateTime.now();
   String? _selectedReminder;
@@ -29,19 +28,6 @@ class _AddBillPageState extends State<AddBillPage> {
   ];
 
   @override
-  void initState() {
-    super.initState();
-    if (widget.bill != null) {
-      _loadBillData();
-    }
-  }
-
-  void _loadBillData() {
-    _nameController.text = widget.bill!.name;
-    _amountController.text = widget.bill!.amount.toString();
-    _selectedDate = widget.bill!.dueDate;
-    _selectedReminder = widget.bill!.reminder;
-  }
 
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
@@ -58,71 +44,46 @@ class _AddBillPageState extends State<AddBillPage> {
   }
 
   Future<void> _saveBill() async {
-    if (widget.bill == null) {
-      //add new bill type
-      if (widget.billTypes.contains(_nameController.text)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('There is already a type with that name.')),
-        );
-        return;
-      } else {
-        await DBHelper.insertBillType(_nameController.text);
-      }
-
-      Navigator.pop(context);
-    } else {
       if (_nameController.text.isEmpty || _amountController.text.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text('All the fields are required')));
         return;
       }
-
-      if (widget.bill!.id == null) {
-        await DBHelper.insertBill(
-          name: _nameController.text,
-          dueDate: _selectedDate,
-          amount: double.parse(_amountController.text),
-          status: 'pending',
-          type: widget.bill!.type,
-          reminder: _selectedReminder,
-        );
-      } else {
-        await DBHelper.updateBill(
-          id: widget.bill!.id,
-          name: _nameController.text,
-          dueDate: _selectedDate,
-          amount: double.parse(_amountController.text),
-          status: widget.bill!.status,
-          type: widget.bill!.type,
-          reminder: _selectedReminder,
-        );
+      if (_selectedBillType == null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Select a Bill type')));
+        return;
       }
 
+      await DBHelper.insertBill(
+        name: _nameController.text,
+        dueDate: _selectedDate,
+        amount: double.parse(_amountController.text),
+        status: 'pending',
+        type: _selectedBillType!,
+        reminder: _selectedReminder,
+      );
+
       Navigator.pop(context);
-    }
+
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.bill == null ? 'Add New Bill Type' : 'Add/Edit Bill'),
+        title: const Text( 'Add New Bill'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            if (widget.bill == null) ...[
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Bill Type Name'),
-              ),
-            ] else ...[
+          
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(labelText: 'Bill Name'),
               ),
+           const SizedBox(height: 20),
               TextFormField(
                 controller: _amountController,
                 keyboardType: TextInputType.number,
@@ -130,7 +91,7 @@ class _AddBillPageState extends State<AddBillPage> {
               ),
               const SizedBox(height: 20),
               DropdownButtonFormField<String>(
-                value: widget.bill!.type,
+                value: _selectedBillType,
                 decoration: const InputDecoration(labelText: 'Bill Type'),
                 items: widget.billTypes
                     .map<DropdownMenuItem<String>>((String value) {
@@ -143,7 +104,7 @@ class _AddBillPageState extends State<AddBillPage> {
                     value == null ? 'Please select a bill type' : null,
                 onChanged: (String? newValue) {
                   setState(() {
-                    widget.bill!.type = newValue!;
+                    _selectedBillType = newValue!;
                   });
                 },
               ),
@@ -176,7 +137,6 @@ class _AddBillPageState extends State<AddBillPage> {
                   ),
                 ],
               ),
-            ],
             const SizedBox(height: 40),
             ElevatedButton(
               onPressed: _saveBill,
@@ -192,7 +152,6 @@ class _AddBillPageState extends State<AddBillPage> {
   void dispose() {
     _nameController.dispose();
     _amountController.dispose();
-    _reminderController.dispose();
     super.dispose();
   }
 }

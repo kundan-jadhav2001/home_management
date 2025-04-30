@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:home_management/pages/add_bill_page.dart';
 import 'package:home_management/widgets/filter_dialog.dart';
+import 'package:home_management/pages/edit_bill_page.dart';
 import '../services/db_helper.dart';
 import 'package:home_management/models/bill.dart';
 import 'package:intl/intl.dart';
@@ -205,11 +206,10 @@ class _BillsState extends State<Bills> {
                                       onPressed: () async {
                                         Navigator.push(
                                             context,
-                                            MaterialPageRoute(
-                                                builder: (context) =>
-                                                    AddBillPage(
-                                                        billTypes: _billTypes,
-                                                        bill: bill)));
+                                            MaterialPageRoute(builder: (context) => EditBillPage(
+                                              billTypes: _billTypes,
+                                              bill: bill
+                                            )));
                                       },
                                     ),
                                     IconButton(
